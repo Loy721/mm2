@@ -37,63 +37,154 @@
 
   //////////////////////logic
 
-  function showModel() {
-    [x, y] = calcModel();
-    const data = {
-      labels: x,
-      datasets: []
-    };
-    for(let i = 0; i < n; ++i){
-      let hlp = {
-        label: 'Dataset '+ (i+1),
-        data: y[i],
-        borderColor: getRandomColor()
-      }
-      data.datasets.push(hlp);
+//   function showModel() {
+//   let plotCtx = document.getElementById('plot').getContext('2d');
+//   const data = {
+//     labels: [],
+//     datasets: []
+//   };
+//   for(let i = 0; i < n; ++i){
+//     let hlp = {
+//       label: 'Dataset '+ (i+1),
+//       data: [],
+//       borderColor: getRandomColor()
+//     }
+//     data.datasets.push(hlp);
+//   }
+//   chart =  new Chart(plotCtx, {
+//     type: 'line',
+//     data: data,
+//     options: {
+//       scales: {
+//         y: {
+//           title:{
+//               display: true,
+//               text: "Число особей"
+//           }
+//         },
+//         x: {
+//           type: 'linear',
+//           title:{
+//               display: true,
+//               text: "Время(лет)"
+//           }
+//         }
+//       }
+//     },
+//   });
+//     [x, y] = calcModel();
+//   }
+
+//   function paintPlot(x, y) {
+//     const data = chart.data;
+//     data.labels.push(x);
+
+//     for (let index = 0; index < data.datasets.length; ++index){
+//       data.datasets[index].data.push(y[index]);
+//     }
+
+//     chart.update();
+// }
+
+//   function calcModel() {
+//     let x = []
+//     let y = []
+//     for(let i = 0; i < n; ++i)
+//       y[i] = []
+//     let prevNi = Ni;
+//     for(let q = 0; q < Math.ceil(T / dt); q++) {// СРАВНИВАЕМ ДАБЛЫ!
+//       x[q] = q * dt;
+//       paintPlot(q, prevNi);
+//       let currNiHlp = []
+//       for(let i = 0; i < n; ++i) {
+//         y[i][q] = (Ai[i] * prevNi[i] + interactionWithOtherSpecies(i, prevNi)) * dt + prevNi[i];
+//         currNiHlp.push(y[i][q]);
+//       }
+//       prevNi = currNiHlp;
+//     } 
+//     return [x, y];
+//   }
+
+async function showModel() {
+  let plotCtx = document.getElementById('plot').getContext('2d');
+  const data = {
+    labels: [],
+    datasets: []
+  };
+  for (let i = 0; i < n; ++i) {
+    let hlp = {
+      label: 'Dataset ' + (i + 1),
+      data: [],
+      borderColor: getRandomColor()
     }
-    const config = {
-      type: 'line',
-      data: data,
-      options: {
-        scales: {
-          y: {
-            title:{
-                display: true,
-                text: "Число особей"
-            }
-          },
-          x: {
-            type: 'linear',
-            title:{
-                display: true,
-                text: "Время(лет)"
-            }
+    data.datasets.push(hlp);
+  }
+  chart = new Chart(plotCtx, {
+    type: 'line',
+    data: data,
+    options: {
+      scales: {
+        y: {
+          title: {
+            display: true,
+            text: "Число особей"
+          }
+        },
+        x: {
+          type: 'linear',
+          title: {
+            display: true,
+            text: "Время(лет)"
           }
         }
-      },
-    };
-    let plotCtx = document.getElementById('plot').getContext('2d');
-    let chart =  new Chart(plotCtx, config);
+      }
+    },
+  });
+
+  await calcModel();
+}
+
+function paintPlot(x, y) {
+  const data = chart.data;
+  data.labels.push(x);
+
+  for (let index = 0; index < data.datasets.length; ++index) {
+    data.datasets[index].data.push(y[index]);
   }
 
-  function calcModel() {
-    let x = []
-    let y = []
-    for(let i = 0; i < n; ++i)
-      y[i] = []
-    let prevNi = Ni
+  chart.update();
+}
 
-    for(let q = 0; q < Math.ceil(T / dt); q++) {// СРАВНИВАЕМ ДАБЛЫ!
+async function calcModel() {
+  let x = [];
+  let y = [];
+  for (let i = 0; i < n; ++i)
+    y[i] = [];
+  let prevNi = Ni;
+
+  async function loop(q) {
+    return new Promise(resolve => {
       x[q] = q * dt;
+      paintPlot(x[q], prevNi);
       let currNiHlp = []
-      for(let i = 0; i < n; ++i) {
+      for (let i = 0; i < n; ++i) {
         y[i][q] = (Ai[i] * prevNi[i] + interactionWithOtherSpecies(i, prevNi)) * dt + prevNi[i];
         currNiHlp.push(y[i][q]);
       }
       prevNi = currNiHlp;
-    } 
-    return [x, y];
+
+      // Отправляем асинхронный запрос на следующий кадр анимации
+      requestAnimationFrame(() => resolve());
+    });
   }
+
+    // Цикл через асинхронную функцию
+    for (let q = 0; q < Math.ceil(T / dt); q++) {
+      await loop(q);
+    }
+
+    return [x, y];
+    }
 
   function interactionWithOtherSpecies(i, prevNi) {
     let result = 0;
@@ -118,3 +209,4 @@ dt = 0;
 Ni = [];
 Ai = [];
 Bij = [];
+chart = null;
